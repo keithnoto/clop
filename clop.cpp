@@ -15,8 +15,7 @@ namespace noto {
 // subroutine for clop_t::parse
 bool process_arg(const std::string &arg, std::deque<std::string> &Q, const std::map<const std::string,option_t*> &flagset, std::map<const void *,std::string> &assigned_options);
 
-std::vector<std::string> 
-clop_t::parse(const int argc, const char * const * const argv) {
+std::vector<std::string> clop_t::parse(const int argc, const char * const * const argv) {
 
 	this->assigned_options.clear();
 
@@ -29,15 +28,16 @@ clop_t::parse(const int argc, const char * const * const argv) {
 
 	// look for option flags in arguments
 	while (!Q.empty()) { 
+
 		const std::string arg = Q.front(); 
 		Q.pop_front(); 
-		if (this->interpret_double_hypen && arg == std::string("--")) {
+		if (this->interpret_double_hypen && arg == std::string("--")) { 
 			// assume this means all arguments after this are literal/verbatim
 			while (!Q.empty()) { 
 				result.push_back(Q.front());
 				Q.pop_front(); 
 			}
-		} else if (!process_arg(arg, Q, flagset, assigned_options)) {
+		} else if (!process_arg(arg, Q, flagset, assigned_options)) { 
 			// regular argument
 			if (this->hypen_arg_error && arg[0]=='-') {
 				throw DAU() << "illegal option \"" << arg << "\"";
@@ -49,16 +49,14 @@ clop_t::parse(const int argc, const char * const * const argv) {
 }
 
 // sub-subroutine for clop_t::parse
-void
-assign_value(option_t *option, 
-             const std::string &flag, 
-             const std::string &value, 
-             std::map<const void *,std::string> &assigned_options)
-{
+void assign_value(option_t *option, const std::string &flag, const std::string &value, std::map<const void *,std::string> &assigned_options) {
+
 	if (assigned_options.find(option->varptr()) != assigned_options.end()) {
 		throw DAU() << "option " << (*option) << " double-initialized with " << assigned_options[ option->varptr() ] << " and " << flag;
 	}
+
 	assigned_options[option->varptr()] = flag;
+
 	if (option->requires_value()) {
 		option->assign(value); 
 	} else {
@@ -69,49 +67,46 @@ assign_value(option_t *option,
 // sub-subroutine for clop_t::parse
 std::vector<std::string>
 expand_arg(const std::string &arg) {
+
 	assert(arg.size() > 0 && arg[0] == '-'); 
 	std::vector<std::string> result;
-	for (size_t i = 1; i < arg.size(); i++) {
+	for (size_t i = 1; i < arg.size(); ++i) {
 		result.push_back(std::string("-") + arg.substr(i, 1)); 
 	}
 	return result;
 }
 
 // subroutine for clop_t::parse
-bool process_arg(const std::string &arg, std::deque<std::string> &Q, const std::map<const std::string,option_t*> &flagset, std::map<const void *,std::string> &assigned_options) {
-	
+bool process_arg(const std::string &arg, std::deque<std::string> &Q, const std::map<const std::string,option_t*> &flagset, std::map<const void *,std::string> &assigned_options)
+{
 	// if arg is -abc for boolean options -a, -b, -c, reset Q and continue
-	if (arg.size() >= 3 && arg[0] == '-' && arg[1] != '-') {
-
+	if (arg.size() >= 3 && arg[0] == '-' && arg[1] != '-') { 
 		std::vector<std::string> expanded_args = expand_arg(arg);
 		// all expanded args are boolean option flags
 		bool legal = true;
-		for (size_t i = 0; i < expanded_args.size(); i++) {
-			if (flagset.find(expanded_args[i]) == flagset.end()) {
+		for (size_t i = 0; i < expanded_args.size(); ++i) { 
+			if (flagset.find(expanded_args[i]) == flagset.end()) { 
 				legal = false;
 				break;
 			}
 		}
-		
-		if (legal) {
-			for (size_t i = expanded_args.size() - 1; i < expanded_args.size(); --i) {
+
+		if (legal) { 
+			for (size_t i = expanded_args.size() - 1; i < expanded_args.size(); --i) { 
 				Q.push_front(expanded_args[i]);
 			}
 			return true;
 		} 
 	}
-
 	// to be changed if this arg is interpreted as a flag (to a legit value)
 	std::string value = "";
-
 	// for each flag (and mapped option_t*) we know about...
 	std::map<const std::string,option_t*>::const_iterator it;
-	for (it = flagset.begin(); it != flagset.end(); it++) {
+	for (it = flagset.begin(); it != flagset.end(); ++it) {
 		// convenience
 		const std::string flag = it->first;
 		option_t *option = it->second;		
-		if (arg == flag) {
-
+		if (arg == flag) {		
 			// arg is exactly flag, if there's a value, it will be the next argument in line
 			if (option->requires_value()) {
 				if (Q.empty()) {
@@ -127,7 +122,7 @@ bool process_arg(const std::string &arg, std::deque<std::string> &Q, const std::
 		// enough room for flag and '=' and a value
 		// arg starts with flag
 		// flag is immediately followed by '='
-		else if (option->requires_value() && arg.size() >= (flag.size() + 2) 
+		else if (option->requires_value() && arg.size() >= (flag.size() + 2)
 				 && flag == arg.substr(0, flag.size()) && arg[flag.size()] == '=')
 		{ 
 			// looks like: -flag=value
@@ -140,37 +135,36 @@ bool process_arg(const std::string &arg, std::deque<std::string> &Q, const std::
 }
 
 // subroutine for clop_t::help
-// print a paragraph p, break at white space
+// print a paragraph, break at white space best you can
 //	w1 = chars remaining on line 1
 //	w2 = paragraph width
-void
-pbreak(FILE *out, const char *p, unsigned int w1, unsigned int w2, const char *delimeter)
-{
-	// TRICK:  Designate one special character to be interpreted as non-breaking space 
-	const char NBSP = '\b';
-	unsigned int i, j; 
+void pbreak(FILE *out, const char *text, unsigned int w1, unsigned int w2, const char *delimeter) {
+		
+	const char NBSP = '\b'; // TRICK:  Designate one special character to be interpreted as non-breaking space (TODO: but this isn't "advertised" for callers to use)
 
-	for (i = 0, j = 0; ; i = j) {
-		unsigned int w = (i == 0 ? w1 : w2); 
-		 // find break ('\033' is special for highlights, NBSP is special character not to break at)
-		for (j = i + w; i < j && (p[j-1] > ' ' || p[j-1] == '\033' || p[j-1] == NBSP); j--);
+	for (size_t cur = 0; ;) { // cur (cursor) is current index in character string 
+		
+		// find break ('\033' is special for highlights, NBSP is special character not to break at)
+		
+		size_t w = (cur == 0 ? w1 : w2);  // characters left available on line: if this is first line, use w1 (chars remaining), o/w use w2 (full width)
+		size_t bp = cur + std::min( w, strlen( text+cur ) ); // set bp (breakpoint) to maximum 
+		for (; cur < bp && (text[bp-1] > ' ' || text[bp-1] == '\033' || text[bp-1] == NBSP); bp--) { }  // and work backwards
+
 		// no break, print it all
-		if (j == i) {
-			j = i + w;
-		}
-		for (; p[i] && i < j; i++) {
-			// special case.  We're not going to run out of room.
-			if (p[i] == '\n') {
-				j = i + 1;
+		if (bp == cur) { bp = cur + std::min( w, strlen( text+cur ) ); }
+		
+		for (; text[cur] && cur < bp; cur++) {
+			if (text[cur] == '\n') { // special case.  We're not going to run out of room.
+				bp = cur + 1;
 				break;
 			}
-			fputc(p[i] == NBSP ? ' ' : p[i], out); 
+			fputc(text[cur] == NBSP ? ' ' : text[cur], out); 
 		}
-		// NULL terminator
-		if (!p[i]) {
-			break;
-		}
+
+		cur = bp; // end-of-loop update, cursor for next loop <- breakpoint
+		if (!text[cur]) { break; } // NULL terminator ends the work
 		fprintf(out, "%s", delimeter);	
+
 	}
 }
 
@@ -185,7 +179,7 @@ clop_t::help(FILE *out, const char *synopsis, const char *version, const char *u
 	const std::string DF_HON = (tty) ? "\033[1m" : "";	// default value highlight on (for "(default: 211)")
 	const std::string HOFF = (tty) ? "\033[0m" : "";	// highlight off
 	size_t termwidth; // terminal width, if we can get it.
-	if (tty) {
+	if (tty) { 
 		// we have a tty so ws_col should give us the right terminal width
 		struct winsize ws;
 		ioctl(fileno(out), TIOCGWINSZ, (void *)(&ws));
@@ -199,7 +193,7 @@ clop_t::help(FILE *out, const char *synopsis, const char *version, const char *u
 		pbreak(out, synopsis, termwidth - 4, termwidth - 4,  "\n    "); 
 		fputs("\n\n", out);
 	}
-	if (version) {
+	if (version) { 
 		fprintf(out, "%sVersion%s:  ", HON.c_str(), HOFF.c_str());
 		pbreak(out, version, termwidth - 10, termwidth, "\n"); 
 		fputs("\n\n", out);
@@ -209,24 +203,23 @@ clop_t::help(FILE *out, const char *synopsis, const char *version, const char *u
 	pbreak(out, CLOP_COMPILE_INFO, termwidth - 15, termwidth, "\n");
 	fputs("\n\n", out);
 	#endif
-	if (usage) {
+	if (usage) { 
 		fprintf(out, "%sUsage%s:  ", HON.c_str(), HOFF.c_str());
 		pbreak(out, usage, termwidth - 8, termwidth, "\n"); 
 		fputs("\n\n", out);
 	}
 
 	// print options
-	if (options.size()) {
+	if (options.size()) { 
 		fprintf(out, "%sOptions%s", HON.c_str(), HOFF.c_str()); 
 		pbreak(out, ":", termwidth - 7, termwidth, "\n"); 
 		fputs("\n\n", out);
 	}
-	
-	for (size_t i = 0; i < options.size(); i++) {
+	for (size_t i = 0; i < options.size(); ++i) {
 		const option_t *option = options[i]; 
 		fputs("    ", out); 
 		fprintf(out, "%s", OL_HON.c_str());
-		for (size_t f = 0; f < option->help.flags.size(); f++) {
+		for (size_t f = 0; f < option->help.flags.size(); ++f) { 
 			fprintf(out, "%s", option->help.flags[f].c_str());
 			if (f < option->help.flags.size() - 1) {
 				fputs(", ", out);
@@ -248,8 +241,8 @@ clop_t::help(FILE *out, const char *synopsis, const char *version, const char *u
 }
 
 std::string
-procinfo(const int argc, const char * const * const argv, const char *version, int arglimit)
-{
+procinfo(const int argc, const char * const * const argv, const char *version, int arglimit) {
+
 	std::ostringstream oss; 
 	if (argc) {
 		oss << argv[0];
@@ -262,7 +255,7 @@ procinfo(const int argc, const char * const * const argv, const char *version, i
 	#ifdef CLOP_COMPILE_INFO
 	oss << "; compile info: " << CLOP_COMPILE_INFO; 
 	#endif
-	if (arglimit) {
+	if (arglimit) { 
 		oss << "; command:";
 		if (argc <= arglimit) {
 			// just print all args
@@ -272,7 +265,7 @@ procinfo(const int argc, const char * const * const argv, const char *version, i
 		} else { 
 			int pb = ((int)(1 + 0.6 * arglimit));
 			// print first pb arguments
-			for (int i = 0; i < pb; i++) {
+			for (int i = 0; i < pb; ++i) {
 				oss << " " << argv[i]; 
 			}
 			oss << " ... (" << argc << " total arguments, including executable) ...";
@@ -286,8 +279,9 @@ procinfo(const int argc, const char * const * const argv, const char *version, i
 }
 
 std::ostream& operator<<(std::ostream &out, const option_t &option) { 
+
 	// out << "option ";
-	for (size_t i = 0; i < option.help.flags.size(); i++) {
+	for (size_t i = 0; i < option.help.flags.size(); ++i) {
 		out << option.help.flags[i]; 
 		if (i < (option.help.flags.size() - 1)) {
 			out << ",";
