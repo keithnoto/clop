@@ -138,32 +138,32 @@ bool process_arg(const std::string &arg, std::deque<std::string> &Q, const std::
 // print a paragraph, break at white space best you can
 //	w1 = chars remaining on line 1
 //	w2 = paragraph width
-void pbreak(FILE *out, const char *text, unsigned int w1, unsigned int w2, const char *delimeter) {
+void pbreak(FILE *out, const char *text, unsigned int w1, unsigned int w2, const char *delimiter) {
 		
 	const char NBSP = '\b'; // TRICK:  Designate one special character to be interpreted as non-breaking space (TODO: but this isn't "advertised" for callers to use)
+	const size_t textlen = strlen(text);
 
-	for (size_t cur = 0; ;) { // cur (cursor) is current index in character string 
+	for (size_t cur = 0; cur < textlen; ) { // cur (cursor) is current index in character string 
 		
 		// find break ('\033' is special for highlights, NBSP is special character not to break at)
 		
 		size_t w = (cur == 0 ? w1 : w2);  // characters left available on line: if this is first line, use w1 (chars remaining), o/w use w2 (full width)
-		size_t bp = cur + std::min( w, strlen( text+cur ) ); // set bp (breakpoint) to maximum 
+		size_t bp = std::min( cur+w, textlen+1 ); // set bp (breakpoint) to maximum (bp points to the character AFTER the breaking whitespace)
 		for (; cur < bp && (text[bp-1] > ' ' || text[bp-1] == '\033' || text[bp-1] == NBSP); bp--) { }  // and work backwards
 
 		// no break, print it all
-		if (bp == cur) { bp = cur + std::min( w, strlen( text+cur ) ); }
+		if (bp == cur) { bp = std::min( cur+w, textlen+1 ); } // reset to a position to fill the line or exhaust the text string
 		
 		for (; text[cur] && cur < bp; cur++) {
-			if (text[cur] == '\n') { // special case.  We're not going to run out of room.
+			if (text[cur] == '\n') { // we'll print the delimiter instead of the newline, but that means we have to exit the loop so we recalcuate the breakpoints to try to fill the next line completely (otherwise it'd be short by the number of characters we printed on this line so far)
 				bp = cur + 1;
 				break;
 			}
-			fputc(text[cur] == NBSP ? ' ' : text[cur], out); 
+			fputc(text[cur] == NBSP ? ' ' : text[cur], out);  // replace NBSP with regular space in the actual output
 		}
 
+		fprintf(out, "%s", delimiter);	 // print the end of line delimiter we're using
 		cur = bp; // end-of-loop update, cursor for next loop <- breakpoint
-		if (!text[cur]) { break; } // NULL terminator ends the work
-		fprintf(out, "%s", delimeter);	
 
 	}
 }
